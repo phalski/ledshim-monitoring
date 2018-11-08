@@ -1,5 +1,3 @@
-import psutil
-
 from phalski_ledshim import Palette
 from phalski_ledshim.threading import Application
 from ledshim_monitoring import cpu_mem_monitor, disk_usage_health_monitor, host_id_monitor, fping_monitor, \
