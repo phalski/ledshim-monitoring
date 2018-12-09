@@ -3,8 +3,7 @@ import psutil
 from socket import AddressFamily
 from typing import Sequence, Optional
 
-from phalski_ledshim import Color, Palette
-from phalski_ledshim.charting import BarChart, ChartSource, HealthStat, ValueSpecification, RedBlueBarChart, BinNumber
+from phalski_ledshim import color, chart
 
 
 def ip_to_int(ip: str):
@@ -39,63 +38,62 @@ def extract_host_id(addr):
 
 def get_host_id_of_inet_addr(net_if_name: str):
     try:
-        return extract_host_id(inet_addr(net_if_name))
+        id = extract_host_id(inet_addr(net_if_name))
+        print(id)
+        return id
     except ValueError:
         return 0
 
 
 def cpu_mem_monitor(pixels: Sequence[int], brightness: float = 1.0, bg_shade: float = -0.75, invert_bars: bool = False):
     value_sources = (lambda: psutil.cpu_percent(), lambda: psutil.virtual_memory().percent)
+    red, blue = tuple(reversed(value_sources)) if invert_bars else value_sources
 
-    if invert_bars:
-        value_sources = tuple(reversed(value_sources))
-
-    return ChartSource(pixels, RedBlueBarChart(len(pixels), ValueSpecification(0, 100, False, True),
-                                               ValueSpecification(0, 100, False, True), brightness, bg_shade),
-                       *value_sources)
-
-
-def cpu_monitor(pixels: Sequence[int], fg_color: Color = Palette.WHITE, bg_color: Optional[Color] = None):
-    if bg_color is None:
-        bg_color = fg_color.dim(-0.75)
-    return ChartSource(pixels, BarChart(len(pixels), ValueSpecification(0, 100, False, True), fg_color, bg_color),
-                       lambda: psutil.cpu_percent())
+    return chart.Factory.red_blue_bar_chart_source(pixels,
+                                                   red,
+                                                   blue,
+                                                   chart.Factory.spec(0, 100, False, True),
+                                                   chart.Factory.spec(0, 100, False, True),
+                                                   brightness,
+                                                   bg_shade)
 
 
-def mem_monitor(pixels: Sequence[int], fg_color: Color = Palette.WHITE, bg_color: Optional[Color] = None):
-    if bg_color is None:
-        bg_color = fg_color.dim(-0.75)
-    return ChartSource(pixels, BarChart(len(pixels), ValueSpecification(0, 100, False, True), fg_color, bg_color),
-                       lambda: psutil.virtual_memory().percent)
+def cpu_monitor(pixels: Sequence[int], fg_color: color.Color = color.NamedColor.WHITE,
+                bg_color: Optional[color.Color] = None):
+    return chart.Factory.bar_chart_source(pixels, lambda: psutil.cpu_percent(), chart.Factory.spec(0, 100, False, True),
+                                          fg_color, bg_color or color.Factory.dim(fg_color, 0.25))
 
 
-def disk_usage_monitor(pixels: Sequence[int], path: str = '/', fg_color: Color = Palette.WHITE,
-                       bg_color: Optional[Color] = None):
-    if bg_color is None:
-        bg_color = fg_color.dim(-0.75)
-    return ChartSource(pixels, BarChart(len(pixels), ValueSpecification(0, 100, False, True), fg_color, bg_color),
-                       lambda: psutil.disk_usage(path).percent)
+def mem_monitor(pixels: Sequence[int], fg_color: color.Color = color.NamedColor.WHITE,
+                bg_color: Optional[color.Color] = None):
+    return chart.Factory.bar_chart_source(pixels, lambda: psutil.virtual_memory().percent,
+                                          chart.Factory.spec(0, 100, False, True), fg_color,
+                                          bg_color or color.Factory.dim(fg_color, 0.25))
+
+
+def disk_usage_monitor(pixels: Sequence[int], path: str = '/', fg_color: color.Color = color.NamedColor.WHITE,
+                       bg_color: Optional[color.Color] = None):
+    return chart.Factory.bar_chart_source(pixels, lambda: psutil.disk_usage(path).percent,
+                                          chart.Factory.spec(0, 100, False, True), fg_color,
+                                          bg_color or color.Factory.dim(fg_color, 0.25))
 
 
 def cpu_health_monitor(pixels: Sequence[int], t_warn_percent: float = 75, t_err_percent: float = 90):
-    return ChartSource(pixels, HealthStat(len(pixels), ValueSpecification(0, 100), t_warn_percent, t_err_percent),
-                       lambda: psutil.cpu_percent())
+    return chart.Factory.health_stat_source(pixels, lambda: psutil.cpu_percent(), chart.Factory.spec(0, 100),
+                                            t_warn_percent, t_err_percent)
 
 
 def mem_health_monitor(pixels: Sequence[int], t_warn_percent: float = 75, t_err_percent: float = 90):
-    return ChartSource(pixels, HealthStat(len(pixels), ValueSpecification(0, 100), t_warn_percent, t_err_percent),
-                       lambda: psutil.virtual_memory().percent)
+    return chart.Factory.health_stat_source(pixels, lambda: psutil.virtual_memory().percent, chart.Factory.spec(0, 100),
+                                            t_warn_percent, t_err_percent)
 
 
 def disk_usage_health_monitor(pixels: Sequence[int], path: str, t_warn_percent: float = 75, t_err_percent: float = 90):
-    return ChartSource(pixels, HealthStat(len(pixels), ValueSpecification(0, 100), t_warn_percent, t_err_percent),
-                       lambda: psutil.disk_usage(path).percent)
+    return chart.Factory.health_stat_source(pixels, lambda: psutil.disk_usage(path).percent, chart.Factory.spec(0, 100),
+                                            t_warn_percent, t_err_percent)
 
 
-def host_id_monitor(pixels: Sequence[int], net_if_name: str, fg_color: Color = Palette.WHITE,
-                    bg_color: Optional[Color] = None):
-    if bg_color is None:
-        bg_color = fg_color.dim(-0.75)
-
-    return ChartSource(pixels, BinNumber(len(pixels), fg_color, bg_color),
-                       lambda: get_host_id_of_inet_addr(net_if_name))
+def host_id_monitor(pixels: Sequence[int], net_if_name: str, fg_color: color.Color = color.NamedColor.WHITE,
+                    bg_color: Optional[color.Color] = None):
+    return chart.Factory.bin_number_source(pixels, lambda: get_host_id_of_inet_addr(net_if_name), True, fg_color,
+                                           bg_color or color.Factory.dim(fg_color, 0.25))

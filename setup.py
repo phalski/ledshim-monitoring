@@ -14,7 +14,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     install_requires=[
-        'phalski-ledshim>=0.1.1',
+        'phalski-ledshim>=0.2.2',
         'psutil',
         'docker'
     ],

@@ -3,9 +3,9 @@ import shutil
 import subprocess
 
 from collections import Counter
-from typing import NamedTuple, Optional, Sequence, Tuple
+from typing import NamedTuple, Optional, Sequence
 
-from phalski_ledshim.charting import ChartSource, HealthStat, ValueSpecification
+from phalski_ledshim import chart
 
 if not shutil.which('fping'):
     raise OSError('fping executable not in PATH')
@@ -132,7 +132,7 @@ def fping_monitor(pixels: Sequence[int], t_warn: float, t_err: float, *args: Tar
         v = sum(l) / float(len(l))
         return v
 
-    return ChartSource(pixels, HealthStat(len(pixels), ValueSpecification(0.0, 1.0), t_warn, t_err), get_value)
+    return chart.Factory.health_stat_source(pixels, get_value, chart.Factory.spec(0.0, 1.0), t_warn, t_err)
 
 
 if __name__ == '__main__':

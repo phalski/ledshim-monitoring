@@ -1,14 +1,11 @@
 import docker
 
-from phalski_ledshim import Color
-from phalski_ledshim.charting import ChartSource, BinNumber
 from typing import Sequence, Optional
 
+from phalski_ledshim import chart, color
 
-def docker_container_monitor(pixels: Sequence[int], fg_color: Color, bg_color: Optional[Color] = None):
-    if bg_color is None:
-        bg_color = fg_color.dim(-0.75)
 
+def docker_container_monitor(pixels: Sequence[int], fg_color: color.Color, bg_color: Optional[color.Color] = None):
     docker_client = None
 
     def get_value(client):
@@ -21,4 +18,4 @@ def docker_container_monitor(pixels: Sequence[int], fg_color: Color, bg_color: O
             client[0] = None
             return 0
 
-    return ChartSource(pixels, BinNumber(len(pixels), fg_color, bg_color), lambda: get_value([docker_client]))
+    return chart.Factory.bin_number_source(pixels, lambda: get_value([docker_client]), True, fg_color, bg_color or color.Factory.dim(fg_color, 0.25))
